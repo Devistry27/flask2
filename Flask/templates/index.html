@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Señales de tránsito</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #resultado {
+            font-weight: bold;
+            font-size: 2rem;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .canvas-container {
+            margin: 0 auto;
+            border: 1px solid #ccc;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <main>
+        <div class="px-4 py-2 my-2 text-center border-bottom">
+            <h1 class="display-5 fw-bold">Señales de tránsito</h1>
+            <div class="col-lg-6 mx-auto">
+                <p class="lead mb-0">Clasificación de imágenes de señales de tránsito usando la cámara web.</p>
+            </div>
+        </div>
+
+        <div class="container mt-5">
+            <div class="row">
+                <div class="col-12 col-md-6 offset-md-3 text-center">
+                    <select id="cameraSelect" class="form-select mb-3"></select>
+                    <video id="video" autoplay playsinline></video>
+                    <div id="resultado">Predicción: <span id="predictionText">Esperando...</span></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const video = document.getElementById('video');
+        const predictionText = document.getElementById('predictionText');
+        const cameraSelect = document.getElementById('cameraSelect');
+        let currentStream = null;
+
+        // Obtener las cámaras disponibles
+        navigator.mediaDevices.enumerateDevices()
+            .then(devices => {
+                devices.forEach(device => {
+                    if (device.kind === 'videoinput') {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+                        cameraSelect.appendChild(option);
+                    }
+                });
+            });
+
+        // Función para iniciar la cámara
+        function startCamera(deviceId) {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            navigator.mediaDevices.getUserMedia({
+                video: { deviceId: deviceId }
+            })
+                .then(stream => {
+                    currentStream = stream;
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error("Error al acceder a la cámara: ", err);
+                });
+        }
+
+        // Iniciar la cámara predeterminada al cargar la página
+        cameraSelect.onchange = function () {
+            startCamera(this.value);
+        };
+
+        // Captura de imagen en tiempo real
+        setInterval(() => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 300;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('image', blob);
+
+                // Enviar la imagen al servidor para la predicción
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        predictionText.textContent = data.label;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }, 'image/jpeg');
+        }, 2000); // Captura cada 2 segundos
+
+        // Iniciar la cámara inicial
+        cameraSelect.onchange(); // Llama la función para iniciar la cámara seleccionada
+    </script>
+
+</body>
+
+</html>
