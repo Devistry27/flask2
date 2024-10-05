@@ -100,7 +100,7 @@
                 formData.append('image', blob);
 
                 // Enviar la imagen al servidor para la predicción
-                fetch('/predict', {
+                fetch('https://devistry27.github.io/predict.', {
                     method: 'POST',
                     body: formData
                 })
