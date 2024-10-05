@@ -104,9 +104,9 @@
                     method: 'POST',
                     body: formData
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        predictionText.textContent = data.label;
+                    .then(response => response.text())  // Espera un HTML en lugar de JSON
+                    .then(html => {
+                        predictionText.innerHTML = html;  // Muestra el HTML recibido
                     })
                     .catch(error => {
                         console.error('Error:', error);
